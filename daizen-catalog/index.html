@@ -6,11 +6,15 @@
     <meta name="description" content="Daizen Hardware upholstery materials catalog">
     <title>Daizen Hardware | Product catalog</title>
     <link rel="stylesheet" href="styles.css">
+    <style>
+        @media (max-width: 640px) { .site-header nav a:not(.header-cta) { display: inline !important; } }
+        @media (max-width: 540px) { .site-header nav a:first-child { display: none !important; } }
+    </style>
 </head>
 <body>
     <header class="site-header">
-        <a class="brand" href="./"><span class="brand-mark">D</span><span>DAIZEN <small>HARDWARE</small></span></a>
-        <nav aria-label="Main navigation"><a href="#catalog">Catalog</a><a href="#contact">Contact</a><a class="header-cta" href="tel:09663783901">Call us</a></nav>
+        <a class="brand" href="./" aria-label="Daizen Hardware home"><img src="images/logo%20(1).png" alt="Daizen Hardware"></a>
+        <nav aria-label="Main navigation"><a href="#catalog">Catalog</a><a href="tel:09663783901">☎ 09663783901</a><a href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer">Facebook ↗</a><a href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer">Shopee ↗</a><a href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer">Lazada ↗</a></nav>
     </header>
     <main>
         <section class="hero"><div><span class="eyebrow">Daizen Hardware</span><h1>Upholstery materials for better finished pieces.</h1><p>Browse our collection of reflective leather, fabrics, sofa mechanisms, PVC piping, foam, and upholstery hardware.</p></div><div class="hero-stat"><strong id="total-products">0</strong><span>available products</span></div></section>
@@ -22,7 +26,7 @@
         </section>
         <section class="product-detail" id="product-detail" hidden></section>
     </main>
-    <footer class="site-footer" id="contact"><span>© <span id="year"></span> Daizen Hardware</span><nav><a href="tel:09663783901">☎ 09663783901</a><a href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer">Facebook ↗</a><a href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer">Shopee ↗</a><a href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer">Lazada ↗</a></nav></footer>
+    <footer class="site-footer" id="contact"><span>© <span id="year"></span> Daizen Hardware</span><span>Quality materials for considered upholstery.</span></footer>
     <script>
         const state = { products: [], filtered: [] };
         const money = (value) => `P${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
