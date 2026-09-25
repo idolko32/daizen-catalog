@@ -111,8 +111,14 @@ main { max-width: 1240px; margin: 0 auto; padding: 30px 28px 0; }
     .catalog-heading { align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; padding: 10px 0; }
     .carousel { grid-template-columns: 30px minmax(0, 1fr) 30px; gap: 5px; }
     .carousel-control { width: 30px; height: 30px; font-size: 22px; }
-    .product-card { flex-basis: 100%; }
-    .product-image { height: 230px; }
+    .product-card { flex-basis: calc((100% - 24px) / 3); }
+    .product-image { height: 112px; }
+    .product-info { padding: 10px 8px 9px; }
+    .product-info h2 { min-height: 46px; font-size: 11px; }
+    .product-meta { align-items: flex-start; flex-direction: column; gap: 3px; }
+    .product-meta strong { font-size: 13px; }
+    .product-meta span { font-size: 9px; }
+    .view-button { padding: 7px 3px; font-size: 9px; }
     .site-footer { align-items: flex-start; flex-direction: column; padding: 18px 16px; }
     .detail-layout { display: block; }
     .detail-image { min-height: 330px; border-right: 0; border-bottom: 1px solid var(--line); }
