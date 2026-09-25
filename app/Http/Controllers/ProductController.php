@@ -120,18 +120,29 @@ class ProductController extends Controller
 
     private function categoryFromFilename(string $filename): string
     {
-        $name = strtolower($filename);
+        $name = strtolower(urldecode($filename));
         foreach ([
-            'pvc' => 'PVC piping', 'spring' => 'Springs', 'leg' => 'Sofa legs',
-            'sofa' => 'Sofa hardware', 'strap' => 'Straps and webbing',
-            'foam' => 'Foam', 'fabric' => 'Upholstery fabric', 'leather' => 'Leather',
+            'logo' => 'Store assets', 'icon' => 'Store assets', 'facebook' => 'Store assets',
+            'viber' => 'Store assets', 'shopee' => 'Store assets', 'lazada' => 'Store assets',
+            'pvc' => 'PVC piping', 'piping' => 'PVC piping', 'pipe' => 'PVC piping',
+            'spring' => 'Springs', 'strap' => 'Straps and webbing', 'webbing' => 'Straps and webbing',
+            'foam' => 'Foam', 'fabric' => 'Upholstery fabric', 'velvet' => 'Upholstery fabric',
+            'leather' => 'Leather and synthetic leather', 'synthetic' => 'Leather and synthetic leather',
+            'thread' => 'Thread', 'yarn' => 'Thread',
+            'leg' => 'Sofa legs', 'feet' => 'Sofa legs', 'foot' => 'Sofa legs',
+            'sofa' => 'Sofa mechanisms', 'mechanism' => 'Sofa mechanisms', 'recline' => 'Sofa mechanisms',
+            'chair' => 'Chair and recliner parts', 'swivel' => 'Chair and recliner parts',
+            'tool' => 'Upholstery tools and accessories', 'tack' => 'Upholstery tools and accessories',
+            'nail' => 'Upholstery tools and accessories', 'button' => 'Upholstery tools and accessories',
+            'tuft' => 'Upholstery tools and accessories', 'staple' => 'Upholstery tools and accessories',
+            'decor' => 'Decorative hardware', 'trim' => 'Decorative hardware', 'strip' => 'Decorative hardware',
         ] as $keyword => $category) {
             if (str_contains($name, $keyword)) {
                 return $category;
             }
         }
 
-        return 'Imported catalog item';
+        return 'Upholstery hardware';
     }
 
     public function destroy(Product $product): RedirectResponse
