@@ -7,21 +7,27 @@
     <title>Daizen Hardware | Product catalog</title>
     <link rel="stylesheet" href="styles.css">
     <style>
+        :root { --black: #101010; --red: #c8102e; --line: #d8d8d5; }
+    </style>
+    <style>
         @media (max-width: 640px) { .site-header nav a:not(.header-cta) { display: inline !important; } }
-        @media (max-width: 540px) { .site-header nav a:first-child { display: none !important; } }
     </style>
 </head>
 <body>
     <header class="site-header">
         <a class="brand" href="./" aria-label="Daizen Hardware home"><img src="images/logo%20(1).png" alt="Daizen Hardware"></a>
-        <nav aria-label="Main navigation"><a href="#catalog">Catalog</a><a href="tel:09663783901">☎ 09663783901</a><a href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer">Facebook ↗</a><a href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer">Shopee ↗</a><a href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer">Lazada ↗</a></nav>
+        <nav aria-label="Main navigation"><a href="#catalog">Catalog</a><a href="tel:09663783901">☎ 09663783901</a><a class="social-link" href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer"><img src="images/facebook-icon%20(1).png" alt="">Facebook ↗</a><a class="social-link" href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer"><img src="images/shopee-icon%20(1).png" alt="">Shopee ↗</a><a class="social-link" href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer"><img src="images/lazada-icon%20(1).png" alt="">Lazada ↗</a></nav>
     </header>
     <main>
         <section class="hero"><div><span class="eyebrow">Daizen Hardware</span><h1>Upholstery materials for better finished pieces.</h1><p>Browse our collection of reflective leather, fabrics, sofa mechanisms, PVC piping, foam, and upholstery hardware.</p></div><div class="hero-stat"><strong id="total-products">0</strong><span>available products</span></div></section>
         <section class="catalog" id="catalog">
             <div class="toolbar"><label class="search"><span>⌕</span><input id="search" type="search" placeholder="Search products, SKUs, or brands..." autocomplete="off"></label><select id="category"><option value="all">All categories</option></select><select id="sort"><option value="recent">Recently added</option><option value="price-low">Price: low to high</option><option value="stock">Stock available</option></select></div>
             <div class="catalog-heading"><strong id="result-count">Loading products...</strong><a href="mailto:orders@daizenhardware.com">Contact us directly to purchase ↗</a></div>
-            <div class="product-grid" id="product-grid" aria-live="polite"></div>
+            <div class="carousel" aria-roledescription="carousel" aria-label="Daizen product catalog">
+                <button class="carousel-control" id="carousel-prev" type="button" aria-label="Previous products">‹</button>
+                <div class="product-grid" id="product-grid" aria-live="polite"></div>
+                <button class="carousel-control" id="carousel-next" type="button" aria-label="Next products">›</button>
+            </div>
             <p class="empty-state" id="empty-state" hidden>No products match your search.</p>
         </section>
         <section class="product-detail" id="product-detail" hidden></section>
@@ -34,6 +40,9 @@
         const search = document.querySelector('#search');
         const category = document.querySelector('#category');
         const sort = document.querySelector('#sort');
+        const previous = document.querySelector('#carousel-prev');
+        const next = document.querySelector('#carousel-next');
+        const moveCarousel = (direction) => grid.scrollBy({ left: direction * grid.clientWidth, behavior: 'smooth' });
         const render = () => {
             const query = search.value.trim().toLowerCase();
             const selected = category.value;
@@ -58,6 +67,8 @@
         };
         fetch('products.json').then((response) => response.json()).then((products) => { state.products = products; document.querySelector('#total-products').textContent = products.length; [...new Set(products.map((product) => product.category))].sort().forEach((item) => category.insertAdjacentHTML('beforeend', `<option value="${item.toLowerCase()}">${escapeHtml(item)}</option>`)); render(); showProduct(products.find((product) => String(product.id) === new URLSearchParams(location.search).get('product'))); }).catch(() => { document.querySelector('#result-count').textContent = 'Catalog unavailable'; });
         [search, category, sort].forEach((control) => control.addEventListener('input', render));
+        previous.addEventListener('click', () => moveCarousel(-1));
+        next.addEventListener('click', () => moveCarousel(1));
         document.querySelector('#year').textContent = new Date().getFullYear();
     </script>
 </body>
