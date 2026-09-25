@@ -18,6 +18,19 @@
         <a class="brand" href="./" aria-label="Daizen Hardware home"><img src="images/logo%20(1).png" alt="Daizen Hardware"></a>
         <nav aria-label="Main navigation"><a href="#catalog">Catalog</a><a href="tel:09663783901">☎ 09663783901</a><a class="social-link" href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer"><img src="images/facebook-icon%20(1).png" alt="">Facebook ↗</a><a class="social-link" href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer"><img src="images/shopee-icon%20(1).png" alt="">Shopee ↗</a><a class="social-link" href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer"><img src="images/lazada-icon%20(1).png" alt="">Lazada ↗</a></nav>
     </header>
+    <section class="store-profile" aria-label="Daizen Hardware store profile">
+        <div class="store-profile-main"><div class="store-avatar"><img src="images/logo%20(1).png" alt=""></div><div><strong>Daizen Hardware</strong><span>Official Store</span><small>99% seller rating</small></div></div>
+        <button class="follow-button" id="follow-button" type="button">Follow</button>
+        <nav class="store-tabs" aria-label="Store sections"><a class="active" href="#catalog">Store</a><a href="#catalog">Products</a><a href="#catalog">New</a><a href="#catalog">Promotions</a></nav>
+    </section>
+    <section class="store-intro">
+        <p><strong>Daizen Hardware Supplies Furniture</strong> decorative materials and hardware such as upholstery nails, springs, webbing, tufting tools, bed lift mechanisms, sofa mechanisms, furniture legs and more.</p>
+        <div class="store-intro-actions"><a class="header-cta" href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer">Visit Lazada Store</a><a class="store-link-facebook" href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer">Visit Facebook Page</a><a class="store-link-shopee" href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer">Visit Shopee Store</a></div>
+    </section>
+    <section class="brand-masthead" aria-label="Daizen Hardware brand">
+        <img src="images/logo%20(1).png" alt="Daizen Hardware">
+        <div class="masthead-copy"><strong>DAIZEN HARDWARE</strong><p>Your Trusted Partner in Furniture Innovation</p></div>
+    </section>
     <main>
         <section class="hero"><div><span class="eyebrow">Daizen Hardware</span><h1>Upholstery materials for better finished pieces.</h1><p>Browse our collection of reflective leather, fabrics, sofa mechanisms, PVC piping, foam, and upholstery hardware.</p></div><div class="hero-stat"><strong id="total-products">0</strong><span>available products</span></div></section>
         <section class="catalog" id="catalog">
@@ -32,7 +45,17 @@
         </section>
         <section class="product-detail" id="product-detail" hidden></section>
     </main>
+    <section class="contact-banner" aria-label="Daizen Hardware contact information">
+        <p><strong>Daizen Hardware Supplies</strong> furniture decorative materials and hardware such as upholstery nails, springs, webbing, tufting tools, bed lift mechanisms, sofa mechanisms, furniture legs and more.</p>
+        <p>Contact (Viber): <a href="tel:+639663783901">+639663783901</a></p>
+        <p>Address: Block 57 Lot 38 Acacia St., Bel Aldea Subdivision, San Francisco, Gen. Trias, Cavite 4107</p>
+    </section>
     <footer class="site-footer" id="contact"><span>© <span id="year"></span> Daizen Hardware</span><span>Quality materials for considered upholstery.</span></footer>
+    <nav class="mobile-bottom-nav" aria-label="Mobile store navigation">
+        <a href="#catalog"><span class="bottom-nav-icon">&#9776;</span><span>Categories</span></a>
+        <a href="#contact"><span class="bottom-nav-icon">&#9632;</span><span>Profile</span></a>
+        <a href="mailto:orders@daizenhardware.com"><span class="bottom-nav-icon">&#128172;</span><span>Chat</span></a>
+    </nav>
     <script>
         const state = { products: [], filtered: [] };
         const money = (value) => `P${Number(value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`;
@@ -42,7 +65,7 @@
         const sort = document.querySelector('#sort');
         const previous = document.querySelector('#carousel-prev');
         const next = document.querySelector('#carousel-next');
-        const moveCarousel = (direction) => grid.scrollBy({ left: direction * grid.clientWidth, behavior: 'smooth' });
+        const moveCarousel = (direction) => grid.scrollBy({ top: direction * grid.clientHeight, behavior: 'smooth' });
         const render = () => {
             const query = search.value.trim().toLowerCase();
             const selected = category.value;
@@ -53,6 +76,10 @@
             if (sort.value === 'price-low') state.filtered.sort((a, b) => Number(a.price) - Number(b.price));
             if (sort.value === 'stock') state.filtered.sort((a, b) => Number(b.stock) - Number(a.stock));
             grid.innerHTML = state.filtered.map((product) => `<article class="product-card"><a class="product-image" href="?product=${product.id}"><img src="${product.image}" alt="${escapeHtml(product.name)}" loading="lazy"></a><div class="product-info"><span class="product-category">${escapeHtml(product.category)}</span><h2>${escapeHtml(product.name)}</h2><p class="sku">${escapeHtml(product.sku)}</p><div class="rule"></div><div class="product-meta"><strong>${money(product.price)} <small>/ ${escapeHtml(product.unit)}</small></strong><span>${product.stock} in stock</span></div><a class="view-button" href="?product=${product.id}">View product →</a></div></article>`).join('');
+            const groupedCards = new Map();
+            [...grid.children].forEach((card) => { const rawCategory = card.querySelector('.product-category')?.textContent?.trim() || 'Products'; const label = rawCategory.toLowerCase() === 'imported catalog item' ? 'Products' : rawCategory; if (!groupedCards.has(label)) groupedCards.set(label, []); groupedCards.get(label).push(card); });
+            grid.innerHTML = '';
+            groupedCards.forEach((cards, label) => { const section = document.createElement('section'); section.className = 'catalog-section'; section.innerHTML = `<h3>${escapeHtml(label)}</h3><div class="category-grid"></div>`; cards.forEach((card) => section.querySelector('.category-grid').appendChild(card)); grid.appendChild(section); });
             document.querySelector('#result-count').textContent = `${state.filtered.length} ${state.filtered.length === 1 ? 'product' : 'products'}`;
             document.querySelector('#empty-state').hidden = state.filtered.length > 0;
         };
@@ -69,6 +96,7 @@
         [search, category, sort].forEach((control) => control.addEventListener('input', render));
         previous.addEventListener('click', () => moveCarousel(-1));
         next.addEventListener('click', () => moveCarousel(1));
+        document.querySelector('#follow-button').addEventListener('click', (event) => { event.currentTarget.classList.toggle('is-following'); event.currentTarget.textContent = event.currentTarget.classList.contains('is-following') ? 'Following' : 'Follow'; });
         document.querySelector('#year').textContent = new Date().getFullYear();
     </script>
 </body>
