@@ -53,7 +53,7 @@
             <div class="panel topline"><div><h1>Catalog manager</h1><p>Upload a product and assign it to an upholstery category.</p></div><button id="logout" class="secondary" type="button">Sign out</button></div>
             <section class="panel"><h2>Add category</h2><form id="category-form"><div class="form-grid"><label>Category name<input id="category-name" required placeholder="Sofa legs"></label><label>Slug<input id="category-slug" required placeholder="sofa-legs"></label></div><div class="actions"><button type="submit">Create category</button></div></form><p id="category-status" class="status"></p></section>
             <section class="panel"><h2>Add product</h2><form id="product-form"><div class="form-grid"><label>Product name<input id="product-name" required></label><label>SKU<input id="product-sku" required></label><label>Category<select id="product-category" required></select></label><label>Price<input id="product-price" type="number" min="0" step="0.01" required></label><label>Unit<input id="product-unit" value="piece" required></label><label>Stock<input id="product-stock" type="number" min="0" step="1" value="0" required></label></div><label>Product image<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required></label><div class="actions"><button type="submit">Upload and save product</button></div></form><p id="product-status" class="status"></p></section>
-            <section class="panel"><h2>Manage products</h2><div class="product-tools"><input id="product-search" type="search" placeholder="Search products or SKUs..." autocomplete="off"><button id="refresh-products" class="secondary" type="button">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Image</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="products-list"></tbody></table></div><p id="list-status" class="status"></p></section>
+            <section class="panel"><h2>Manage products</h2><div class="product-tools"><input id="product-search" type="search" placeholder="Search products or SKUs..." autocomplete="off"><button id="refresh-products" class="secondary" type="button">Refresh</button><button id="import-products" type="button">Import existing catalog</button></div><p class="muted">Your original catalog is stored in <code>products.json</code>. Import it once to manage those products through Supabase.</p><div class="table-wrap"><table><thead><tr><th>Image</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="products-list"></tbody></table></div><p id="list-status" class="status"></p></section>
         </section>
     </main>
     <script type="module">
@@ -74,15 +74,21 @@
         };
         const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
         const loadProducts = async () => {
-            const { data, error } = await supabase.from('products').select('id,name,sku,price,unit,stock,image_url,image_path,is_active,category_id,categories(name)').order('created_at', { ascending: false });
-            if (error) throw error;
-            products = data || [];
+            const localProducts = () => fetch('products.json').then((response) => response.json()).then((items) => items.map((product) => ({ ...product, image_url: product.image, categories: { name: product.category }, isLocal: true })));
+            try {
+                const { data, error } = await supabase.from('products').select('id,name,sku,price,unit,stock,image_url,image_path,is_active,category_id,categories(name)').order('created_at', { ascending: false });
+                if (error) throw error;
+                products = data?.length ? data : await localProducts();
+            } catch (error) {
+                products = await localProducts();
+                setStatus('#list-status', 'Showing the local catalog. Import it to manage products in Supabase.');
+            }
             renderProducts();
         };
         const renderProducts = () => {
             const query = document.querySelector('#product-search').value.trim().toLowerCase();
             const visible = products.filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(query));
-            document.querySelector('#products-list').innerHTML = visible.map((product) => `<tr><td>${product.image_url ? `<img src="${escapeHtml(product.image_url)}" alt="">` : '<span class="muted">No image</span>'}</td><td><strong>${escapeHtml(product.name)}</strong><br><span class="muted">${escapeHtml(product.sku)}</span></td><td>${escapeHtml(product.categories?.name || 'Uncategorized')}</td><td>P${Number(product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })} / ${escapeHtml(product.unit)}</td><td>${escapeHtml(product.stock)}</td><td><div class="table-actions"><button type="button" data-edit="${product.id}">Edit</button><button type="button" class="danger" data-delete="${product.id}">Delete</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="muted">No products found.</td></tr>';
+            document.querySelector('#products-list').innerHTML = visible.map((product) => `<tr><td>${product.image_url ? `<img src="${escapeHtml(product.image_url)}" alt="">` : '<span class="muted">No image</span>'}</td><td><strong>${escapeHtml(product.name)}</strong><br><span class="muted">${escapeHtml(product.sku)}</span></td><td>${escapeHtml(product.categories?.name || 'Uncategorized')}</td><td>P${Number(product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })} / ${escapeHtml(product.unit)}</td><td>${escapeHtml(product.stock)}</td><td><div class="table-actions">${product.isLocal ? '<span class="muted">Import first</span>' : `<button type="button" data-edit="${product.id}">Edit</button><button type="button" class="danger" data-delete="${product.id}">Delete</button>`}</div></td></tr>`).join('') || '<tr><td colspan="6" class="muted">No products found.</td></tr>';
         };
         const showApp = async (session) => { loginPanel.style.display = session ? 'none' : 'block'; app.style.display = session ? 'block' : 'none'; if (session) { try { await loadCategories(); await loadProducts(); } catch (error) { setStatus('#product-status', error.message); } } };
         document.querySelector('#category-name').addEventListener('input', (event) => { const slug = document.querySelector('#category-slug'); if (!slug.dataset.edited) slug.value = slugify(event.target.value); });
@@ -93,6 +99,26 @@
         document.querySelector('#product-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#product-status', 'Uploading image and saving product...'); const file = document.querySelector('#product-image').files[0]; const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-'); const path = `${crypto.randomUUID()}-${safeName}`; const upload = await supabase.storage.from('products').upload(path, file, { contentType: file.type, upsert: false }); if (upload.error) return setStatus('#product-status', upload.error.message); const imageUrl = supabase.storage.from('products').getPublicUrl(path).data.publicUrl; const { error } = await supabase.from('products').insert({ category_id: Number(document.querySelector('#product-category').value), name: document.querySelector('#product-name').value.trim(), sku: document.querySelector('#product-sku').value.trim(), price: Number(document.querySelector('#product-price').value), unit: document.querySelector('#product-unit').value.trim(), stock: Number(document.querySelector('#product-stock').value), image_url: imageUrl, image_path: path, is_active: true }); if (error) return setStatus('#product-status', error.message); event.target.reset(); setStatus('#product-status', 'Product saved successfully.'); await loadCategories(); await loadProducts(); });
         document.querySelector('#product-search').addEventListener('input', renderProducts);
         document.querySelector('#refresh-products').addEventListener('click', async () => { setStatus('#list-status', 'Refreshing...'); try { await loadProducts(); setStatus('#list-status', 'Product list updated.'); } catch (error) { setStatus('#list-status', error.message); } });
+        document.querySelector('#import-products').addEventListener('click', async () => {
+            if (!window.confirm('Import all products from products.json into Supabase? Existing SKUs will be updated.')) return;
+            setStatus('#list-status', 'Importing existing catalog...');
+            try {
+                const localProducts = await fetch('products.json').then((response) => response.json());
+                const categoryIds = new Map(categories.map((category) => [category.name.toLowerCase(), category.id]));
+                const missingCategories = [...new Set(localProducts.map((product) => product.category).filter((name) => !categoryIds.has(name.toLowerCase())))];
+                for (const name of missingCategories) {
+                    const { data, error } = await supabase.from('categories').insert({ name, slug: slugify(name) }).select('id,name').single();
+                    if (error) throw error;
+                    categoryIds.set(data.name.toLowerCase(), data.id);
+                }
+                const rows = localProducts.map((product) => ({ category_id: categoryIds.get(product.category.toLowerCase()), name: product.name, sku: product.sku, price: Number(product.price || 0), unit: product.unit || 'piece', stock: Number(product.stock || 0), image_url: product.image, image_path: null, is_active: true }));
+                const { error } = await supabase.from('products').upsert(rows, { onConflict: 'sku' });
+                if (error) throw error;
+                await loadCategories();
+                await loadProducts();
+                setStatus('#list-status', `${rows.length} products imported successfully.`);
+            } catch (error) { setStatus('#list-status', error.message); }
+        });
         document.querySelector('#products-list').addEventListener('click', async (event) => {
             const editButton = event.target.closest('[data-edit]');
             const deleteButton = event.target.closest('[data-delete]');
