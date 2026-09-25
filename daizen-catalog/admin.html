@@ -78,7 +78,9 @@
             try {
                 const { data, error } = await supabase.from('products').select('id,name,sku,price,unit,stock,image_url,image_path,is_active,category_id,categories(name)').order('created_at', { ascending: false });
                 if (error) throw error;
-                products = data?.length ? data : await localProducts();
+                const local = await localProducts();
+                const remoteBySku = new Map((data || []).map((product) => [String(product.sku).toLowerCase(), product]));
+                products = [...(data || []), ...local.filter((product) => !remoteBySku.has(String(product.sku).toLowerCase()))];
             } catch (error) {
                 products = await localProducts();
                 setStatus('#list-status', 'Showing the local catalog. Import it to manage products in Supabase.');
