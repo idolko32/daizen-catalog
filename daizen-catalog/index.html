@@ -92,7 +92,19 @@
             detail.innerHTML = `<a class="back-link" href="./">← Back to catalog</a><div class="detail-layout"><div class="detail-image"><img src="${product.image}" alt="${escapeHtml(product.name)}"></div><div class="detail-copy"><span class="product-category">${escapeHtml(product.category)}</span><h1>${escapeHtml(product.name)}</h1><div class="detail-price">${money(product.price)} <small>/ ${escapeHtml(product.unit)}</small></div><p class="detail-lead">Quality upholstery material from Daizen Hardware.</p><dl class="detail-specs"><div><dt>SKU</dt><dd>${escapeHtml(product.sku)}</dd></div><div><dt>Stock available</dt><dd>${product.stock} units</dd></div><div><dt>Availability</dt><dd>${product.stock > 0 ? 'Available to order' : 'Please confirm availability'}</dd></div></dl><div class="order-panel"><strong>Interested in this product?</strong><p>Contact Daizen Hardware directly to confirm availability and place your order.</p><div class="order-actions"><a class="header-cta" href="mailto:orders@daizenhardware.com?subject=Enquiry%20about%20${encodeURIComponent(product.name)}">✉ Email to order</a><a href="tel:09663783901">☎ Call 09663783901</a></div></div></div></div>`;
             document.title = `${product.name} | Daizen Hardware`;
         };
-        fetch('products.json').then((response) => response.json()).then((products) => { state.products = products; document.querySelector('#total-products').textContent = products.length; [...new Set(products.map((product) => product.category))].sort().forEach((item) => category.insertAdjacentHTML('beforeend', `<option value="${item.toLowerCase()}">${escapeHtml(item)}</option>`)); render(); showProduct(products.find((product) => String(product.id) === new URLSearchParams(location.search).get('product'))); }).catch(() => { document.querySelector('#result-count').textContent = 'Catalog unavailable'; });
+        const SUPABASE_URL = 'https://oqpvylalhysonuxrquyd.supabase.co';
+        const SUPABASE_KEY = 'sb_publishable_LWrGp7Ux5C2CRQ-E_qBV_w_V3tgcPhC';
+        const normalizeProducts = (products) => products.map((product) => ({ ...product, category: product.category || product.categories?.name || 'Upholstery hardware', image: product.image || product.image_url || (product.image_path ? `${SUPABASE_URL}/storage/v1/object/public/products/${product.image_path.replace(/^products\//, '').split('/').map(encodeURIComponent).join('/')}` : '') }));
+        const loadProducts = async () => {
+            try {
+                const response = await fetch(`${SUPABASE_URL}/rest/v1/products?select=*,categories(name)&is_active=eq.true&order=created_at.desc`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` } });
+                if (!response.ok) throw new Error('Supabase catalog request failed');
+                return normalizeProducts(await response.json());
+            } catch (error) {
+                return normalizeProducts(await fetch('products.json').then((response) => response.json()));
+            }
+        };
+        loadProducts().then((products) => { state.products = products; document.querySelector('#total-products').textContent = products.length; [...new Set(products.map((product) => product.category))].sort().forEach((item) => category.insertAdjacentHTML('beforeend', `<option value="${item.toLowerCase()}">${escapeHtml(item)}</option>`)); render(); showProduct(products.find((product) => String(product.id) === new URLSearchParams(location.search).get('product'))); }).catch(() => { document.querySelector('#result-count').textContent = 'Catalog unavailable'; });
         [search, category, sort].forEach((control) => control.addEventListener('input', render));
         previous.addEventListener('click', () => moveCarousel(-1));
         next.addEventListener('click', () => moveCarousel(1));

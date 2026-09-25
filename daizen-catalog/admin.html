@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Daizen Hardware | Admin</title>
+    <style>
+        :root { --black:#101010; --red:#c8102e; --paper:#f4f4f2; --line:#d8d8d5; --muted:#686866; --white:#fff; font-family:"Segoe UI",Arial,sans-serif; }
+        * { box-sizing:border-box; }
+        body { margin:0; color:var(--black); background:var(--paper); }
+        header { padding:20px max(20px,calc((100% - 960px)/2)); color:var(--white); background:var(--black); border-bottom:5px solid var(--red); }
+        header strong { font-size:18px; letter-spacing:.05em; }
+        main { max-width:960px; margin:24px auto; padding:0 20px; }
+        .panel { margin-bottom:18px; padding:22px; background:var(--white); border:1px solid var(--line); }
+        h1,h2 { margin:0 0 16px; }
+        h1 { font-size:25px; } h2 { font-size:17px; }
+        form { display:grid; gap:12px; }
+        .form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+        label { display:grid; gap:6px; color:var(--muted); font-size:12px; font-weight:700; }
+        input,select,button { min-height:42px; padding:0 11px; border:1px solid var(--line); border-radius:0; background:var(--white); color:var(--black); font:inherit; }
+        input[type=file] { padding:9px 11px; }
+        button { color:var(--white); background:var(--red); border-color:var(--red); cursor:pointer; font-weight:700; }
+        button:hover { background:#9e0d24; }
+        .secondary { color:var(--black); background:var(--white); border-color:var(--black); }
+        .actions { display:flex; gap:10px; flex-wrap:wrap; }
+        .status { min-height:20px; color:var(--red); font-size:12px; }
+        #app { display:none; }
+        .topline { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+        .product-tools { display:flex; gap:10px; margin-bottom:14px; }
+        .product-tools input { flex:1; }
+        .table-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; min-width:720px; }
+        th,td { padding:10px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; font-size:13px; }
+        th { color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.04em; }
+        td img { width:48px; height:48px; object-fit:cover; border:1px solid var(--line); }
+        .table-actions { display:flex; gap:6px; }
+        .table-actions button { min-height:34px; padding:0 9px; font-size:12px; }
+        .danger { background:var(--black); border-color:var(--black); }
+        .danger:hover { background:var(--red); }
+        .muted { color:var(--muted); }
+        @media(max-width:640px) { main { padding:0 12px; } .panel { padding:16px; } .form-grid { grid-template-columns:1fr; } .topline { align-items:flex-start; flex-direction:column; } }
+    </style>
+</head>
+<body>
+    <header><strong>DAIZEN HARDWARE / ADMIN</strong></header>
+    <main>
+        <section id="login-panel" class="panel">
+            <h1>Admin sign in</h1>
+            <form id="login-form"><label>Email<input id="email" type="email" required autocomplete="email"></label><label>Password<input id="password" type="password" required autocomplete="current-password"></label><button type="submit">Sign in</button></form>
+            <p id="login-status" class="status"></p>
+        </section>
+        <section id="app">
+            <div class="panel topline"><div><h1>Catalog manager</h1><p>Upload a product and assign it to an upholstery category.</p></div><button id="logout" class="secondary" type="button">Sign out</button></div>
+            <section class="panel"><h2>Add category</h2><form id="category-form"><div class="form-grid"><label>Category name<input id="category-name" required placeholder="Sofa legs"></label><label>Slug<input id="category-slug" required placeholder="sofa-legs"></label></div><div class="actions"><button type="submit">Create category</button></div></form><p id="category-status" class="status"></p></section>
+            <section class="panel"><h2>Add product</h2><form id="product-form"><div class="form-grid"><label>Product name<input id="product-name" required></label><label>SKU<input id="product-sku" required></label><label>Category<select id="product-category" required></select></label><label>Price<input id="product-price" type="number" min="0" step="0.01" required></label><label>Unit<input id="product-unit" value="piece" required></label><label>Stock<input id="product-stock" type="number" min="0" step="1" value="0" required></label></div><label>Product image<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required></label><div class="actions"><button type="submit">Upload and save product</button></div></form><p id="product-status" class="status"></p></section>
+            <section class="panel"><h2>Manage products</h2><div class="product-tools"><input id="product-search" type="search" placeholder="Search products or SKUs..." autocomplete="off"><button id="refresh-products" class="secondary" type="button">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Image</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="products-list"></tbody></table></div><p id="list-status" class="status"></p></section>
+        </section>
+    </main>
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+
+        const supabase = createClient('https://oqpvylalhysonuxrquyd.supabase.co', 'sb_publishable_LWrGp7Ux5C2CRQ-E_qBV_w_V3tgcPhC');
+        let categories = [];
+        let products = [];
+        const loginPanel = document.querySelector('#login-panel');
+        const app = document.querySelector('#app');
+        const setStatus = (id, message) => { document.querySelector(id).textContent = message; };
+        const slugify = (value) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const loadCategories = async () => {
+            const { data, error } = await supabase.from('categories').select('id,name').eq('is_active', true).order('name');
+            if (error) throw error;
+            categories = data;
+            document.querySelector('#product-category').innerHTML = data.map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`).join('');
+        };
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
+        const loadProducts = async () => {
+            const { data, error } = await supabase.from('products').select('id,name,sku,price,unit,stock,image_url,image_path,is_active,category_id,categories(name)').order('created_at', { ascending: false });
+            if (error) throw error;
+            products = data || [];
+            renderProducts();
+        };
+        const renderProducts = () => {
+            const query = document.querySelector('#product-search').value.trim().toLowerCase();
+            const visible = products.filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(query));
+            document.querySelector('#products-list').innerHTML = visible.map((product) => `<tr><td>${product.image_url ? `<img src="${escapeHtml(product.image_url)}" alt="">` : '<span class="muted">No image</span>'}</td><td><strong>${escapeHtml(product.name)}</strong><br><span class="muted">${escapeHtml(product.sku)}</span></td><td>${escapeHtml(product.categories?.name || 'Uncategorized')}</td><td>P${Number(product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })} / ${escapeHtml(product.unit)}</td><td>${escapeHtml(product.stock)}</td><td><div class="table-actions"><button type="button" data-edit="${product.id}">Edit</button><button type="button" class="danger" data-delete="${product.id}">Delete</button></div></td></tr>`).join('') || '<tr><td colspan="6" class="muted">No products found.</td></tr>';
+        };
+        const showApp = async (session) => { loginPanel.style.display = session ? 'none' : 'block'; app.style.display = session ? 'block' : 'none'; if (session) { try { await loadCategories(); await loadProducts(); } catch (error) { setStatus('#product-status', error.message); } } };
+        document.querySelector('#category-name').addEventListener('input', (event) => { const slug = document.querySelector('#category-slug'); if (!slug.dataset.edited) slug.value = slugify(event.target.value); });
+        document.querySelector('#category-slug').addEventListener('input', (event) => { event.target.dataset.edited = 'true'; });
+        document.querySelector('#login-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#login-status', 'Signing in...'); const { data, error } = await supabase.auth.signInWithPassword({ email: document.querySelector('#email').value, password: document.querySelector('#password').value }); if (error) return setStatus('#login-status', error.message); await showApp(data.session); });
+        document.querySelector('#logout').addEventListener('click', async () => { await supabase.auth.signOut(); await showApp(null); });
+        document.querySelector('#category-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#category-status', 'Saving category...'); const { error } = await supabase.from('categories').insert({ name: document.querySelector('#category-name').value.trim(), slug: document.querySelector('#category-slug').value.trim() }); if (error) return setStatus('#category-status', error.message); event.target.reset(); document.querySelector('#category-slug').dataset.edited = ''; setStatus('#category-status', 'Category created.'); await loadCategories(); });
+        document.querySelector('#product-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#product-status', 'Uploading image and saving product...'); const file = document.querySelector('#product-image').files[0]; const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-'); const path = `${crypto.randomUUID()}-${safeName}`; const upload = await supabase.storage.from('products').upload(path, file, { contentType: file.type, upsert: false }); if (upload.error) return setStatus('#product-status', upload.error.message); const imageUrl = supabase.storage.from('products').getPublicUrl(path).data.publicUrl; const { error } = await supabase.from('products').insert({ category_id: Number(document.querySelector('#product-category').value), name: document.querySelector('#product-name').value.trim(), sku: document.querySelector('#product-sku').value.trim(), price: Number(document.querySelector('#product-price').value), unit: document.querySelector('#product-unit').value.trim(), stock: Number(document.querySelector('#product-stock').value), image_url: imageUrl, image_path: path, is_active: true }); if (error) return setStatus('#product-status', error.message); event.target.reset(); setStatus('#product-status', 'Product saved successfully.'); await loadCategories(); await loadProducts(); });
+        document.querySelector('#product-search').addEventListener('input', renderProducts);
+        document.querySelector('#refresh-products').addEventListener('click', async () => { setStatus('#list-status', 'Refreshing...'); try { await loadProducts(); setStatus('#list-status', 'Product list updated.'); } catch (error) { setStatus('#list-status', error.message); } });
+        document.querySelector('#products-list').addEventListener('click', async (event) => {
+            const editButton = event.target.closest('[data-edit]');
+            const deleteButton = event.target.closest('[data-delete]');
+            const product = products.find((item) => String(item.id) === String(editButton?.dataset.edit || deleteButton?.dataset.delete));
+            if (!product) return;
+            if (editButton) {
+                const name = window.prompt('Product name:', product.name);
+                if (name === null) return;
+                const price = window.prompt('Price:', product.price);
+                if (price === null) return;
+                const stock = window.prompt('Stock:', product.stock);
+                if (stock === null) return;
+                setStatus('#list-status', 'Updating product...');
+                const { error } = await supabase.from('products').update({ name: name.trim(), price: Number(price), stock: Number(stock) }).eq('id', product.id);
+                if (error) return setStatus('#list-status', error.message);
+                await loadProducts();
+                return setStatus('#list-status', 'Product updated.');
+            }
+            if (deleteButton && window.confirm(`Delete "${product.name}"? This cannot be undone.`)) {
+                setStatus('#list-status', 'Deleting product...');
+                const { error } = await supabase.from('products').delete().eq('id', product.id);
+                if (error) return setStatus('#list-status', error.message);
+                if (product.image_path) await supabase.storage.from('products').remove([product.image_path]);
+                await loadProducts();
+                setStatus('#list-status', 'Product deleted.');
+            }
+        });
+        const { data: session } = await supabase.auth.getSession();
+        await showApp(session.session);
+    </script>
+</body>
+</html>
