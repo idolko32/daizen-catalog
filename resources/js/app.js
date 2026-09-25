@@ -6,6 +6,16 @@ const sort = document.querySelector('#sort-products');
 const grid = document.querySelector('#product-grid');
 const count = document.querySelector('#result-count');
 const empty = document.querySelector('#empty-state');
+const previous = document.querySelector('#carousel-prev');
+const next = document.querySelector('#carousel-next');
+
+const moveCarousel = (direction) => {
+	if (!grid) return;
+	grid.scrollBy({ left: direction * grid.clientWidth, behavior: 'smooth' });
+};
+
+previous?.addEventListener('click', () => moveCarousel(-1));
+next?.addEventListener('click', () => moveCarousel(1));
 
 if (search && category && sort && grid) {
 	const cards = [...grid.querySelectorAll('.product-card')];

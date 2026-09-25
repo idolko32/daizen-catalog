@@ -13,16 +13,24 @@ class ProductController extends Controller
 {
     public function index(): View
     {
+        $this->syncImageLibrary();
+
         return view('home', [
-            'products' => Product::query()->where('is_active', true)->latest()->get(),
+            'products' => Product::query()->where('is_active', true)->latest()->get()
+                ->unique(fn (Product $product) => $product->image_path ?: 'product-' . $product->id)
+                ->values(),
             'isAdmin' => false,
         ]);
     }
 
     public function adminIndex(): View
     {
+        $this->syncImageLibrary();
+
         return view('home', [
-            'products' => Product::query()->latest()->get(),
+            'products' => Product::query()->latest()->get()
+                ->unique(fn (Product $product) => $product->image_path ?: 'product-' . $product->id)
+                ->values(),
             'isAdmin' => true,
         ]);
     }
@@ -58,8 +66,15 @@ class ProductController extends Controller
 
     public function importImageLibrary(): RedirectResponse
     {
+        $created = $this->syncImageLibrary();
+
+        return redirect()->route('admin.products')->with('status', "$created image products imported. Existing images were skipped.");
+    }
+
+    private function syncImageLibrary(): int
+    {
         $supported = ['jpg', 'jpeg', 'png', 'webp', 'jfif', 'gif'];
-        $created = 0;
+        $rows = [];
 
         foreach (File::files(base_path('images')) as $file) {
             if (!in_array(strtolower($file->getExtension()), $supported, true)) {
@@ -67,8 +82,8 @@ class ProductController extends Controller
             }
 
             $filename = $file->getFilename();
-            $sku = 'IMG-' . strtoupper(substr(sha1($filename), 0, 10));
-            $product = Product::firstOrCreate(['sku' => $sku], [
+            $rows[] = [
+                'sku' => 'IMG-' . strtoupper(substr(sha1($filename), 0, 10)),
                 'name' => $this->nameFromFilename($filename),
                 'category' => $this->categoryFromFilename($filename),
                 'price' => 0,
@@ -76,12 +91,23 @@ class ProductController extends Controller
                 'stock' => 0,
                 'image_path' => $filename,
                 'is_active' => true,
-            ]);
-
-            $created += (int) $product->wasRecentlyCreated;
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
         }
 
-        return redirect()->route('admin.products')->with('status', "$created image products imported. Existing images were skipped.");
+        if (!$rows) {
+            return 0;
+        }
+
+        $existing = Product::query()
+            ->whereIn('sku', array_column($rows, 'sku'))
+            ->pluck('sku')
+            ->all();
+
+        Product::query()->upsert($rows, ['sku'], []);
+
+        return count($rows) - count($existing);
     }
 
     private function nameFromFilename(string $filename): string

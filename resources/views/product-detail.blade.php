@@ -9,7 +9,7 @@
 </head>
 <body class="product-detail-page">
     <header class="public-header">
-        <a class="brand brand-dark" href="{{ route('catalog') }}"><span class="brand-mark">D</span><span>DAIZEN <small>HARDWARE</small></span></a>
+        <a class="brand brand-dark" href="{{ route('catalog') }}"><img src="{{ asset('images/logo (1).png') }}" alt="Daizen Hardware logo" class="brand-logo"></a>
         <div class="header-links"><a href="{{ route('catalog') }}">Catalog</a><a href="#about">About us</a><a href="tel:09663783901">Call us</a><a class="header-cta" href="mailto:orders@daizenhardware.com?subject=Enquiry%20about%20{{ urlencode($product->name) }}">Email to order <span>↗</span></a></div>
     </header>
     <main class="detail-shell">

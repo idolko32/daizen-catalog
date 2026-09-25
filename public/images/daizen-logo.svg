@@ -1,0 +1,15 @@
+<svg width="820" height="420" viewBox="0 0 820 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="820" height="420" fill="#FFFFFF"/>
+
+  <g transform="translate(120 26)">
+    <path d="M68 0H198C248 0 284 16 318 52C354 90 372 136 372 210C372 284 354 330 318 368C284 404 248 420 198 420H68V0ZM140 75V345H189C236 345 269 324 290 285C307 252 316 233 316 210C316 187 307 168 290 135C269 96 236 75 189 75H140Z" fill="#D6111E"/>
+    <path d="M143 110L255 210L143 310V110Z" fill="#111111"/>
+    <path d="M194 0H286L412 210L286 420H194L320 210L194 0Z" fill="#D6111E"/>
+    <path d="M324 0H402L512 120V300L402 420H324L432 210L324 0Z" fill="#111111"/>
+    <path d="M255 0H324L196 210H127L255 0Z" fill="#FFFFFF"/>
+    <path d="M255 420H324L196 210H127L255 420Z" fill="#FFFFFF"/>
+  </g>
+
+  <text x="420" y="190" text-anchor="middle" fill="#111111" font-family="Arial, Helvetica, sans-serif" font-size="112" font-weight="900" letter-spacing="2">DAIZEN</text>
+  <text x="420" y="290" text-anchor="middle" fill="#D6111E" font-family="Arial, Helvetica, sans-serif" font-size="46" font-weight="900" letter-spacing="8">HARDWARE</text>
+</svg>

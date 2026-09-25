@@ -12,12 +12,13 @@
     @if($isAdmin)
         <aside class="sidebar" aria-label="Admin navigation">
             <a class="brand" href="{{ route('admin.products') }}" aria-label="Daizen Hardware admin home">
-                <span class="brand-mark">D</span><span>DAIZEN <small>HARDWARE</small></span>
+                <img src="{{ asset('images/logo (1).png') }}" alt="Daizen Hardware logo" class="brand-logo brand-logo-admin">
             </a>
             <nav class="side-nav">
                 <a href="#"><span class="nav-icon">⌂</span> Dashboard</a>
                 <a class="active" href="{{ route('admin.products') }}"><span class="nav-icon">▦</span> Products</a>
-                <a href="#"><span class="nav-icon">↗</span> Public catalog</a>
+                <a href="{{ route('catalog') }}"><span class="nav-icon">↗</span> Public catalog</a>
+                <a href="{{ route('image.library') }}"><span class="nav-icon">▧</span> Image library</a>
                 <a href="#"><span class="nav-icon">♧</span> Customers</a>
                 <a href="#"><span class="nav-icon">◈</span> Projects</a>
                 <a href="#"><span class="nav-icon">⌑</span> Shopping lists</a>
@@ -32,8 +33,8 @@
     <main class="page-shell">
         @if(!$isAdmin)
             <header class="public-header">
-                <a class="brand brand-dark" href="{{ route('catalog') }}"><span class="brand-mark">D</span><span>DAIZEN <small>HARDWARE</small></span></a>
-                <div class="header-links"><a href="#catalog">Catalog</a><a href="tel:09663783901">☎ 09663783901</a><a href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer">Facebook ↗</a><a href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer">Shopee ↗</a><a href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer">Lazada ↗</a></div>
+                <a class="brand brand-dark" href="{{ route('catalog') }}"><img src="{{ asset('images/logo (1).png') }}" alt="Daizen Hardware logo" class="brand-logo"></a>
+                <div class="header-links"><a href="#catalog">Catalog</a><a href="{{ route('image.library') }}">All images</a><a href="tel:09663783901">☎ 09663783901</a><a href="https://www.facebook.com/profile.php?id=100071005026361" target="_blank" rel="noopener noreferrer">Facebook ↗</a><a href="https://shopee.ph/daizenhardware?categoryId=100636&amp;entryPoint=ShopByPDP&amp;itemId=49800871209" target="_blank" rel="noopener noreferrer">Shopee ↗</a><a href="https://www.lazada.com.ph/shop/daizen-hardware" target="_blank" rel="noopener noreferrer">Lazada ↗</a></div>
             </header>
         @endif
         <div class="content">
@@ -60,13 +61,17 @@
             <section class="catalog" id="catalog">
                 <div class="toolbar"><label class="search"><span>⌕</span><input id="product-search" type="search" placeholder="Search products, SKUs, or brands..." autocomplete="off"></label><select id="category-filter"><option value="all">All categories</option>@foreach($products->pluck('category')->unique() as $category)<option value="{{ strtolower($category) }}">{{ $category }}</option>@endforeach</select><select id="sort-products"><option value="recent">Recently added</option><option value="price-low">Price: low to high</option><option value="stock">Stock available</option></select><button class="button button-teal" id="filter-button" type="button">☷ <span>Filter</span></button></div>
                 <div class="catalog-heading"><div><strong id="result-count">{{ count($products) }} products</strong><span> · Updated just now</span></div>@if(!$isAdmin)<a href="mailto:orders@daizenhardware.com">Contact us directly to purchase <span>↗</span></a>@endif</div>
-                <div class="product-grid" id="product-grid">
-                    @foreach($products as $product)
-                        <article class="product-card" data-name="{{ strtolower($product->name) }}" data-category="{{ strtolower($product->category) }}" data-price="{{ $product->price }}" data-stock="{{ $product->stock }}">
-                            <a class="product-image" href="{{ $isAdmin ? '#product-' . $product->id : route('products.show', $product) }}"><img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy"><span class="image-label">{{ $isAdmin ? 'LIVE' : 'DAIZEN' }}</span></a>
-                            <div class="product-info"><span class="product-category">{{ $product->category }}</span><h3>{{ $product->name }}</h3><p class="sku">{{ $product->sku }}</p><div class="product-rule"></div><div class="product-meta"><strong>P{{ number_format((float) $product->price, 2) }} <small>/ {{ $product->unit }}</small></strong><span class="stock">▧ {{ $product->stock }} in stock</span></div><div class="card-actions">@if($isAdmin)<a class="text-button" href="#edit-{{ $product->id }}">♢ Edit</a><form action="{{ route('admin.products.destroy', $product) }}" method="POST" onsubmit="return confirm('Remove this product?')">@csrf @method('DELETE')<button class="text-button danger-button" type="submit">Delete</button></form><a class="outline-button" href="#details-{{ $product->id }}">View details ↗</a>@else<a class="outline-button full" href="{{ route('products.show', $product) }}">View product&nbsp; →</a>@endif</div></div>
-                        </article>
-                    @endforeach
+                <div class="carousel" aria-roledescription="carousel" aria-label="Daizen product catalog">
+                    <button class="carousel-control carousel-control-prev" id="carousel-prev" type="button" aria-label="Previous products">‹</button>
+                    <div class="product-grid" id="product-grid">
+                        @foreach($products as $product)
+                            <article class="product-card" data-name="{{ strtolower($product->name) }}" data-category="{{ strtolower($product->category) }}" data-price="{{ $product->price }}" data-stock="{{ $product->stock }}">
+                                <a class="product-image" href="{{ $isAdmin ? '#product-' . $product->id : route('products.show', $product) }}"><img src="{{ $product->image_url }}" alt="{{ $product->name }}" loading="lazy"><span class="image-label">{{ $isAdmin ? 'LIVE' : 'DAIZEN' }}</span></a>
+                                <div class="product-info"><span class="product-category">{{ $product->category }}</span><h3>{{ $product->name }}</h3><p class="sku">{{ $product->sku }}</p><div class="product-rule"></div><div class="product-meta"><strong>P{{ number_format((float) $product->price, 2) }} <small>/ {{ $product->unit }}</small></strong><span class="stock">▧ {{ $product->stock }} in stock</span></div><div class="card-actions">@if($isAdmin)<a class="text-button" href="#edit-{{ $product->id }}">♢ Edit</a><form action="{{ route('admin.products.destroy', $product) }}" method="POST" onsubmit="return confirm('Remove this product?')">@csrf @method('DELETE')<button class="text-button danger-button" type="submit">Delete</button></form><a class="outline-button" href="#details-{{ $product->id }}">View details ↗</a>@else<a class="outline-button full" href="{{ route('products.show', $product) }}">View product&nbsp; →</a>@endif</div></div>
+                            </article>
+                        @endforeach
+                    </div>
+                    <button class="carousel-control carousel-control-next" id="carousel-next" type="button" aria-label="Next products">›</button>
                 </div>
                 <div class="empty-state" id="empty-state" hidden>No products match your search.</div>
             </section>
