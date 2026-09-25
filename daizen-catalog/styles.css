@@ -38,9 +38,9 @@ button, input, select { font: inherit; }
 .masthead-copy strong { display: block; color: var(--black); font-size: clamp(24px, 3vw, 42px); letter-spacing: .03em; }
 .brand-masthead p { margin: 3px 0 0; color: #777; font-size: clamp(20px, 2.5vw, 35px); font-weight: 300; }
 .catalog { display: flex; flex-direction: column; }
+.toolbar { order: 0; }
 .catalog-heading { order: 1; }
 .carousel { order: 2; }
-.toolbar { order: 3; }
 .empty-state { order: 4; }
 .store-intro { max-width: 1184px; margin: 24px auto 0; padding: 16px 22px; color: var(--black); background: var(--white); border-left: 5px solid var(--red); font-size: 12px; }
 .store-intro p { margin: 0 0 12px; }
