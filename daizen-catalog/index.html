@@ -65,7 +65,7 @@
         const sort = document.querySelector('#sort');
         const previous = document.querySelector('#carousel-prev');
         const next = document.querySelector('#carousel-next');
-        const moveCarousel = (direction) => grid.scrollBy({ top: direction * grid.clientHeight, behavior: 'smooth' });
+        const moveCarousel = (direction) => window.scrollBy({ top: direction * Math.max(window.innerHeight * .8, 420), behavior: 'smooth' });
         const render = () => {
             const query = search.value.trim().toLowerCase();
             const selected = category.value;

@@ -77,7 +77,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 30px 28px 0; }
 #carousel-prev::before { content: "↑"; }
 #carousel-next::before { content: "↓"; }
 .carousel-control:hover { color: var(--white); background: var(--red); border-color: var(--red); }
-.product-grid { min-width: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; max-height: 520px; overflow-x: hidden; overflow-y: auto; scroll-behavior: smooth; scroll-snap-type: y mandatory; scrollbar-color: var(--red) transparent; scrollbar-width: thin; }
+.product-grid { min-width: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; overflow: visible; scroll-behavior: smooth; scroll-snap-type: y mandatory; scrollbar-color: var(--red) transparent; scrollbar-width: thin; }
 .catalog-section { min-width: 0; grid-column: 1 / -1; }
 .catalog-section h3 { margin: 4px 0 10px; padding-left: 10px; border-left: 3px solid var(--red); font-size: 13px; letter-spacing: .05em; text-transform: uppercase; }
 .category-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
@@ -162,7 +162,7 @@ main { max-width: 1240px; margin: 0 auto; padding: 30px 28px 0; }
     .catalog-heading { align-items: flex-start; flex-direction: column; justify-content: center; gap: 5px; padding: 10px 0; }
     .carousel { grid-template-rows: 30px minmax(0, 1fr) 30px; gap: 5px; }
     .carousel-control { display: grid; height: 30px; }
-    .product-grid { gap: 4px; max-height: 430px; overflow-x: hidden; overflow-y: auto; scroll-snap-type: y mandatory; }
+    .product-grid { gap: 4px; overflow: visible; scroll-snap-type: y mandatory; }
     .category-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
     .catalog-section h3 { margin: 5px 0 8px; font-size: 11px; }
     .product-card { border: 0; box-shadow: none; }
