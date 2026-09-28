@@ -202,8 +202,12 @@
                 if (error) throw error;
                 const oldPath = form.dataset.imagePath;
                 if (uploadedPath && oldPath) await supabase.storage.from('products').remove([oldPath]);
+                const updatedProduct = products.find((item) => String(item.id) === String(form.dataset.id));
+                if (updatedProduct) {
+                    Object.assign(updatedProduct, payload, { image_url: payload.image_url || updatedProduct.image_url, image_path: payload.image_path || updatedProduct.image_path, categories: { name: document.querySelector('#edit-category').selectedOptions[0]?.textContent || 'Uncategorized' } });
+                }
                 closeEdit();
-                await loadProducts();
+                renderProducts();
                 setStatus('#list-status', 'Product updated successfully.');
             } catch (error) {
                 if (uploadedPath) await supabase.storage.from('products').remove([uploadedPath]);
