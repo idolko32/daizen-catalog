@@ -60,6 +60,7 @@
             <div class="panel topline"><div><h1>Catalog manager</h1><p>Upload a product and assign it to an upholstery category.</p></div><button id="logout" class="secondary" type="button">Sign out</button></div>
             <section class="panel"><h2>Add category</h2><form id="category-form"><div class="form-grid"><label>Category name<input id="category-name" required placeholder="Sofa legs"></label><label>Slug<input id="category-slug" required placeholder="sofa-legs"></label></div><div class="actions"><button type="submit">Create category</button></div></form><p id="category-status" class="status"></p></section>
             <section class="panel"><h2>Add product</h2><form id="product-form"><div class="form-grid"><label>Product name<input id="product-name" required></label><label>SKU<input id="product-sku" required></label><label>Category<select id="product-category" required></select></label><label>Price<input id="product-price" type="number" min="0" step="0.01" required></label><label>Unit<input id="product-unit" value="piece" required></label><label>Stock<input id="product-stock" type="number" min="0" step="1" value="0" required></label></div><label>Product image<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required></label><div class="actions"><button type="submit">Upload and save product</button></div></form><p id="product-status" class="status"></p></section>
+            <section class="panel"><h2>Batch upload products</h2><form id="batch-form"><div class="form-grid"><label>Category<select id="batch-category" required></select></label><label>Default price<input id="batch-price" type="number" min="0" step="0.01" value="0" required></label><label>Unit<input id="batch-unit" value="piece" required></label><label>Default stock<input id="batch-stock" type="number" min="0" step="1" value="0" required></label></div><label>Product images<input id="batch-images" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple required></label><p class="muted">Each filename becomes the initial product name. You can edit the details afterward.</p><div class="actions"><button type="submit">Upload all images</button></div></form><p id="batch-status" class="status"></p></section>
             <section class="panel"><h2>Manage products</h2><div class="product-tools"><input id="product-search" type="search" placeholder="Search products or SKUs..." autocomplete="off"><select id="product-category-filter"><option value="all">All categories</option></select><select id="product-sort"><option value="recent">Recently added</option><option value="name">Name A-Z</option><option value="price-low">Price low-high</option><option value="price-high">Price high-low</option><option value="stock">Stock high-low</option></select><button id="refresh-products" class="secondary" type="button">Refresh</button><button id="import-products" type="button">Import existing catalog</button></div><p class="muted">Your original catalog is stored in <code>products.json</code>. Import it once to manage those products through Supabase.</p><div class="table-wrap"><table><thead><tr><th>Image</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="products-list"></tbody></table></div><p id="list-status" class="status"></p></section>
         </section>
     </main>
@@ -85,6 +86,7 @@
             categories = data;
             document.querySelector('#product-category').innerHTML = data.map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`).join('');
             document.querySelector('#product-category-filter').innerHTML = `<option value="all">All categories</option>${data.map((category) => `<option value="${escapeHtml(category.name.toLowerCase())}">${escapeHtml(category.name)}</option>`).join('')}`;
+            document.querySelector('#batch-category').innerHTML = data.map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`).join('');
         };
         const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
         const loadProducts = async () => {
@@ -119,6 +121,39 @@
         document.querySelector('#logout').addEventListener('click', async () => { await supabase.auth.signOut(); await showApp(null); });
         document.querySelector('#category-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#category-status', 'Saving category...'); const { error } = await supabase.from('categories').insert({ name: document.querySelector('#category-name').value.trim(), slug: document.querySelector('#category-slug').value.trim() }); if (error) return setStatus('#category-status', error.message); event.target.reset(); document.querySelector('#category-slug').dataset.edited = ''; setStatus('#category-status', 'Category created.'); await loadCategories(); });
         document.querySelector('#product-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#product-status', 'Uploading image and saving product...'); const file = document.querySelector('#product-image').files[0]; const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-'); const path = `${crypto.randomUUID()}-${safeName}`; const upload = await supabase.storage.from('products').upload(path, file, { contentType: file.type, upsert: false }); if (upload.error) return setStatus('#product-status', upload.error.message); const imageUrl = supabase.storage.from('products').getPublicUrl(path).data.publicUrl; const { error } = await supabase.from('products').insert({ category_id: Number(document.querySelector('#product-category').value), name: document.querySelector('#product-name').value.trim(), sku: document.querySelector('#product-sku').value.trim(), price: Number(document.querySelector('#product-price').value), unit: document.querySelector('#product-unit').value.trim(), stock: Number(document.querySelector('#product-stock').value), image_url: imageUrl, image_path: path, is_active: true }); if (error) return setStatus('#product-status', error.message); event.target.reset(); setStatus('#product-status', 'Product saved successfully.'); await loadCategories(); await loadProducts(); });
+        document.querySelector('#batch-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const files = [...document.querySelector('#batch-images').files];
+            const categoryId = Number(document.querySelector('#batch-category').value);
+            const price = Number(document.querySelector('#batch-price').value || 0);
+            const unit = document.querySelector('#batch-unit').value.trim() || 'piece';
+            const stock = Number(document.querySelector('#batch-stock').value || 0);
+            let saved = 0;
+            const failed = [];
+            for (const [index, file] of files.entries()) {
+                let path = '';
+                try {
+                    setStatus('#batch-status', `Uploading ${index + 1} of ${files.length}: ${file.name}`);
+                    const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
+                    path = `${crypto.randomUUID()}-${safeName}`;
+                    const upload = await supabase.storage.from('products').upload(path, file, { contentType: file.type, upsert: false });
+                    if (upload.error) throw upload.error;
+                    const name = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+                    const sku = `BATCH-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+                    const imageUrl = supabase.storage.from('products').getPublicUrl(path).data.publicUrl;
+                    const { error } = await supabase.from('products').insert({ category_id: categoryId, name: name || 'New product', sku, price, unit, stock, image_url: imageUrl, image_path: path, is_active: true });
+                    if (error) throw error;
+                    saved += 1;
+                } catch (error) {
+                    if (path) await supabase.storage.from('products').remove([path]);
+                    failed.push(`${file.name}: ${error.message}`);
+                }
+            }
+            event.target.reset();
+            await loadCategories();
+            await loadProducts();
+            setStatus('#batch-status', `${saved} of ${files.length} products uploaded.${failed.length ? ` Failed: ${failed.join(' | ')}` : ''}`);
+        });
         document.querySelector('#product-search').addEventListener('input', renderProducts);
         document.querySelector('#product-category-filter').addEventListener('change', renderProducts);
         document.querySelector('#product-sort').addEventListener('change', renderProducts);
