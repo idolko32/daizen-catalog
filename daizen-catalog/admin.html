@@ -38,6 +38,13 @@
         .danger { background:var(--black); border-color:var(--black); }
         .danger:hover { background:var(--red); }
         .muted { color:var(--muted); }
+        .modal { position:fixed; inset:0; z-index:10; display:grid; place-items:center; padding:20px; background:rgba(0,0,0,.55); }
+        .modal[hidden] { display:none; }
+        .modal-panel { width:min(700px,100%); max-height:calc(100vh - 40px); overflow:auto; padding:22px; background:var(--white); border-top:5px solid var(--red); }
+        .modal-title { display:flex; justify-content:space-between; gap:16px; align-items:center; }
+        .modal-title h2 { margin:0; }
+        .close-button { min-width:42px; padding:0; color:var(--black); background:var(--white); border-color:var(--black); }
+        textarea { min-height:90px; padding:10px 11px; border:1px solid var(--line); resize:vertical; font:inherit; }
         @media(max-width:640px) { main { padding:0 12px; } .panel { padding:16px; } .form-grid { grid-template-columns:1fr; } .topline { align-items:flex-start; flex-direction:column; } }
     </style>
 </head>
@@ -56,6 +63,12 @@
             <section class="panel"><h2>Manage products</h2><div class="product-tools"><input id="product-search" type="search" placeholder="Search products or SKUs..." autocomplete="off"><button id="refresh-products" class="secondary" type="button">Refresh</button><button id="import-products" type="button">Import existing catalog</button></div><p class="muted">Your original catalog is stored in <code>products.json</code>. Import it once to manage those products through Supabase.</p><div class="table-wrap"><table><thead><tr><th>Image</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="products-list"></tbody></table></div><p id="list-status" class="status"></p></section>
         </section>
     </main>
+    <div class="modal" id="edit-modal" hidden>
+        <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+            <div class="modal-title"><h2 id="edit-title">Edit product</h2><button class="close-button" id="close-edit" type="button" aria-label="Close">×</button></div>
+            <form id="edit-product-form"><div class="form-grid"><label>Product name<input id="edit-name" required></label><label>SKU<input id="edit-sku" required></label><label>Category<select id="edit-category" required></select></label><label>Price<input id="edit-price" type="number" min="0" step="0.01" required></label><label>Unit<input id="edit-unit" required></label><label>Stock available<input id="edit-stock" type="number" min="0" step="1" required></label><label>Sort order<input id="edit-sort-order" type="number" step="1" value="0"></label></div><label>Description<textarea id="edit-description"></textarea></label><label>Replace image<input id="edit-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label><input id="edit-active" type="checkbox" checked> Active and visible in catalog</label><div class="actions"><button type="submit">Save changes</button><button class="secondary" id="cancel-edit" type="button">Cancel</button></div></form><p id="edit-status" class="status"></p>
+        </section>
+    </div>
     <script type="module">
         import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
@@ -76,7 +89,7 @@
         const loadProducts = async () => {
             const localProducts = () => fetch('products.json').then((response) => response.json()).then((items) => items.map((product) => ({ ...product, image_url: product.image, categories: { name: product.category }, isLocal: true })));
             try {
-                const { data, error } = await supabase.from('products').select('id,name,sku,price,unit,stock,image_url,image_path,is_active,category_id,categories(name)').order('created_at', { ascending: false });
+                const { data, error } = await supabase.from('products').select('id,name,sku,price,unit,stock,image_url,image_path,is_active,category_id,description,sort_order,categories(name)').order('created_at', { ascending: false });
                 if (error) throw error;
                 const local = await localProducts();
                 const remoteBySku = new Map((data || []).map((product) => [String(product.sku).toLowerCase(), product]));
@@ -100,6 +113,10 @@
         document.querySelector('#category-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#category-status', 'Saving category...'); const { error } = await supabase.from('categories').insert({ name: document.querySelector('#category-name').value.trim(), slug: document.querySelector('#category-slug').value.trim() }); if (error) return setStatus('#category-status', error.message); event.target.reset(); document.querySelector('#category-slug').dataset.edited = ''; setStatus('#category-status', 'Category created.'); await loadCategories(); });
         document.querySelector('#product-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#product-status', 'Uploading image and saving product...'); const file = document.querySelector('#product-image').files[0]; const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-'); const path = `${crypto.randomUUID()}-${safeName}`; const upload = await supabase.storage.from('products').upload(path, file, { contentType: file.type, upsert: false }); if (upload.error) return setStatus('#product-status', upload.error.message); const imageUrl = supabase.storage.from('products').getPublicUrl(path).data.publicUrl; const { error } = await supabase.from('products').insert({ category_id: Number(document.querySelector('#product-category').value), name: document.querySelector('#product-name').value.trim(), sku: document.querySelector('#product-sku').value.trim(), price: Number(document.querySelector('#product-price').value), unit: document.querySelector('#product-unit').value.trim(), stock: Number(document.querySelector('#product-stock').value), image_url: imageUrl, image_path: path, is_active: true }); if (error) return setStatus('#product-status', error.message); event.target.reset(); setStatus('#product-status', 'Product saved successfully.'); await loadCategories(); await loadProducts(); });
         document.querySelector('#product-search').addEventListener('input', renderProducts);
+        const editModal = document.querySelector('#edit-modal');
+        const closeEdit = () => { editModal.hidden = true; document.querySelector('#edit-product-form').reset(); setStatus('#edit-status', ''); };
+        document.querySelector('#close-edit').addEventListener('click', closeEdit);
+        document.querySelector('#cancel-edit').addEventListener('click', closeEdit);
         document.querySelector('#refresh-products').addEventListener('click', async () => { setStatus('#list-status', 'Refreshing...'); try { await loadProducts(); setStatus('#list-status', 'Product list updated.'); } catch (error) { setStatus('#list-status', error.message); } });
         document.querySelector('#import-products').addEventListener('click', async () => {
             if (!window.confirm('Import all products from products.json into Supabase? Existing SKUs will be updated.')) return;
@@ -133,17 +150,19 @@
             const product = products.find((item) => String(item.id) === String(editButton?.dataset.edit || deleteButton?.dataset.delete));
             if (!product) return;
             if (editButton) {
-                const name = window.prompt('Product name:', product.name);
-                if (name === null) return;
-                const price = window.prompt('Price:', product.price);
-                if (price === null) return;
-                const stock = window.prompt('Stock:', product.stock);
-                if (stock === null) return;
-                setStatus('#list-status', 'Updating product...');
-                const { error } = await supabase.from('products').update({ name: name.trim(), price: Number(price), stock: Number(stock) }).eq('id', product.id);
-                if (error) return setStatus('#list-status', error.message);
-                await loadProducts();
-                return setStatus('#list-status', 'Product updated.');
+                document.querySelector('#edit-name').value = product.name || '';
+                document.querySelector('#edit-sku').value = product.sku || '';
+                document.querySelector('#edit-category').innerHTML = categories.map((category) => `<option value="${category.id}" ${String(category.id) === String(product.category_id) ? 'selected' : ''}>${escapeHtml(category.name)}</option>`).join('');
+                document.querySelector('#edit-price').value = product.price || 0;
+                document.querySelector('#edit-unit').value = product.unit || 'piece';
+                document.querySelector('#edit-stock').value = product.stock || 0;
+                document.querySelector('#edit-sort-order').value = product.sort_order || 0;
+                document.querySelector('#edit-description').value = product.description || '';
+                document.querySelector('#edit-active').checked = product.is_active !== false;
+                document.querySelector('#edit-product-form').dataset.id = product.id;
+                document.querySelector('#edit-product-form').dataset.imagePath = product.image_path || '';
+                editModal.hidden = false;
+                return;
             }
             if (deleteButton && window.confirm(`Delete "${product.name}"? This cannot be undone.`)) {
                 setStatus('#list-status', 'Deleting product...');
@@ -152,6 +171,34 @@
                 if (product.image_path) await supabase.storage.from('products').remove([product.image_path]);
                 await loadProducts();
                 setStatus('#list-status', 'Product deleted.');
+            }
+        });
+        document.querySelector('#edit-product-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const form = event.target;
+            const file = document.querySelector('#edit-image').files[0];
+            let uploadedPath = '';
+            try {
+                setStatus('#edit-status', 'Saving changes...');
+                const payload = { name: document.querySelector('#edit-name').value.trim(), sku: document.querySelector('#edit-sku').value.trim(), category_id: Number(document.querySelector('#edit-category').value), price: Number(document.querySelector('#edit-price').value), unit: document.querySelector('#edit-unit').value.trim(), stock: Number(document.querySelector('#edit-stock').value), description: document.querySelector('#edit-description').value.trim(), sort_order: Number(document.querySelector('#edit-sort-order').value || 0), is_active: document.querySelector('#edit-active').checked };
+                if (file) {
+                    const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-');
+                    uploadedPath = `${crypto.randomUUID()}-${safeName}`;
+                    const upload = await supabase.storage.from('products').upload(uploadedPath, file, { contentType: file.type, upsert: false });
+                    if (upload.error) throw upload.error;
+                    payload.image_path = uploadedPath;
+                    payload.image_url = supabase.storage.from('products').getPublicUrl(uploadedPath).data.publicUrl;
+                }
+                const { error } = await supabase.from('products').update(payload).eq('id', form.dataset.id);
+                if (error) throw error;
+                const oldPath = form.dataset.imagePath;
+                if (uploadedPath && oldPath) await supabase.storage.from('products').remove([oldPath]);
+                closeEdit();
+                await loadProducts();
+                setStatus('#list-status', 'Product updated successfully.');
+            } catch (error) {
+                if (uploadedPath) await supabase.storage.from('products').remove([uploadedPath]);
+                setStatus('#edit-status', error.message);
             }
         });
         const { data: session } = await supabase.auth.getSession();
