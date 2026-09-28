@@ -113,13 +113,19 @@
                     if (error) throw error;
                     categoryIds.set(data.name.toLowerCase(), data.id);
                 }
-                const rows = localProducts.map((product) => ({ category_id: categoryIds.get(product.category.toLowerCase()), name: product.name, sku: product.sku, price: Number(product.price || 0), unit: product.unit || 'piece', stock: Number(product.stock || 0), image_url: product.image, image_path: null, is_active: true }));
-                const { error } = await supabase.from('products').upsert(rows, { onConflict: 'sku' });
-                if (error) throw error;
+                const { data: existing, error: existingError } = await supabase.from('products').select('id,sku');
+                if (existingError) throw existingError;
+                const existingSkus = new Set((existing || []).map((product) => String(product.sku).toLowerCase()));
+                const rows = localProducts.filter((product) => !existingSkus.has(String(product.sku).toLowerCase())).map((product) => ({ category_id: categoryIds.get(product.category.toLowerCase()), name: product.name, sku: product.sku, price: Number(product.price || 0), unit: product.unit || 'piece', stock: Number(product.stock || 0), image_url: product.image, image_path: null, is_active: true }));
+                for (let index = 0; index < rows.length; index += 50) {
+                    const { error } = await supabase.from('products').insert(rows.slice(index, index + 50));
+                    if (error) throw error;
+                    setStatus('#list-status', `Imported ${Math.min(index + 50, rows.length)} of ${rows.length} products...`);
+                }
                 await loadCategories();
                 await loadProducts();
-                setStatus('#list-status', `${rows.length} products imported successfully.`);
-            } catch (error) { setStatus('#list-status', error.message); }
+                setStatus('#list-status', rows.length ? `${rows.length} products imported successfully.` : 'All existing products are already imported.');
+            } catch (error) { setStatus('#list-status', `Import failed: ${error.message}`); }
         });
         document.querySelector('#products-list').addEventListener('click', async (event) => {
             const editButton = event.target.closest('[data-edit]');
