@@ -26,8 +26,8 @@
         .status { min-height:20px; color:var(--red); font-size:12px; }
         #app { display:none; }
         .topline { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-        .product-tools { display:flex; gap:10px; margin-bottom:14px; }
-        .product-tools input { flex:1; }
+        .product-tools { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:14px; }
+        .product-tools input, .product-tools select { flex:1 1 180px; min-width:0; }
         .table-wrap { overflow-x:auto; }
         table { width:100%; border-collapse:collapse; min-width:720px; }
         th,td { padding:10px 8px; border-bottom:1px solid var(--line); text-align:left; vertical-align:middle; font-size:13px; }
@@ -60,7 +60,7 @@
             <div class="panel topline"><div><h1>Catalog manager</h1><p>Upload a product and assign it to an upholstery category.</p></div><button id="logout" class="secondary" type="button">Sign out</button></div>
             <section class="panel"><h2>Add category</h2><form id="category-form"><div class="form-grid"><label>Category name<input id="category-name" required placeholder="Sofa legs"></label><label>Slug<input id="category-slug" required placeholder="sofa-legs"></label></div><div class="actions"><button type="submit">Create category</button></div></form><p id="category-status" class="status"></p></section>
             <section class="panel"><h2>Add product</h2><form id="product-form"><div class="form-grid"><label>Product name<input id="product-name" required></label><label>SKU<input id="product-sku" required></label><label>Category<select id="product-category" required></select></label><label>Price<input id="product-price" type="number" min="0" step="0.01" required></label><label>Unit<input id="product-unit" value="piece" required></label><label>Stock<input id="product-stock" type="number" min="0" step="1" value="0" required></label></div><label>Product image<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif" required></label><div class="actions"><button type="submit">Upload and save product</button></div></form><p id="product-status" class="status"></p></section>
-            <section class="panel"><h2>Manage products</h2><div class="product-tools"><input id="product-search" type="search" placeholder="Search products or SKUs..." autocomplete="off"><button id="refresh-products" class="secondary" type="button">Refresh</button><button id="import-products" type="button">Import existing catalog</button></div><p class="muted">Your original catalog is stored in <code>products.json</code>. Import it once to manage those products through Supabase.</p><div class="table-wrap"><table><thead><tr><th>Image</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="products-list"></tbody></table></div><p id="list-status" class="status"></p></section>
+            <section class="panel"><h2>Manage products</h2><div class="product-tools"><input id="product-search" type="search" placeholder="Search products or SKUs..." autocomplete="off"><select id="product-category-filter"><option value="all">All categories</option></select><select id="product-sort"><option value="recent">Recently added</option><option value="name">Name A-Z</option><option value="price-low">Price low-high</option><option value="price-high">Price high-low</option><option value="stock">Stock high-low</option></select><button id="refresh-products" class="secondary" type="button">Refresh</button><button id="import-products" type="button">Import existing catalog</button></div><p class="muted">Your original catalog is stored in <code>products.json</code>. Import it once to manage those products through Supabase.</p><div class="table-wrap"><table><thead><tr><th>Image</th><th>Product</th><th>Category</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody id="products-list"></tbody></table></div><p id="list-status" class="status"></p></section>
         </section>
     </main>
     <div class="modal" id="edit-modal" hidden>
@@ -84,6 +84,7 @@
             if (error) throw error;
             categories = data;
             document.querySelector('#product-category').innerHTML = data.map((category) => `<option value="${category.id}">${escapeHtml(category.name)}</option>`).join('');
+            document.querySelector('#product-category-filter').innerHTML = `<option value="all">All categories</option>${data.map((category) => `<option value="${escapeHtml(category.name.toLowerCase())}">${escapeHtml(category.name)}</option>`).join('')}`;
         };
         const escapeHtml = (value) => String(value ?? '').replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]);
         const loadProducts = async () => {
@@ -102,7 +103,13 @@
         };
         const renderProducts = () => {
             const query = document.querySelector('#product-search').value.trim().toLowerCase();
-            const visible = products.filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(query));
+            const selectedCategory = document.querySelector('#product-category-filter').value;
+            const visible = products.filter((product) => `${product.name} ${product.sku}`.toLowerCase().includes(query) && (selectedCategory === 'all' || String(product.categories?.name || product.category || '').toLowerCase() === selectedCategory));
+            const sort = document.querySelector('#product-sort').value;
+            if (sort === 'name') visible.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+            if (sort === 'price-low') visible.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+            if (sort === 'price-high') visible.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+            if (sort === 'stock') visible.sort((a, b) => Number(b.stock || 0) - Number(a.stock || 0));
             document.querySelector('#products-list').innerHTML = visible.map((product) => `<tr><td>${product.image_url ? `<img src="${escapeHtml(product.image_url)}" alt="">` : '<span class="muted">No image</span>'}</td><td><strong>${escapeHtml(product.name)}</strong><br><span class="muted">${escapeHtml(product.sku)}</span></td><td>${escapeHtml(product.categories?.name || 'Uncategorized')}</td><td>P${Number(product.price || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })} / ${escapeHtml(product.unit)}</td><td>${escapeHtml(product.stock)}</td><td><div class="table-actions">${product.isLocal ? '<span class="muted">Import first</span>' : `<button type="button" data-edit="${product.id}">Edit</button><button type="button" class="danger" data-delete="${product.id}">Delete</button>`}</div></td></tr>`).join('') || '<tr><td colspan="6" class="muted">No products found.</td></tr>';
         };
         const showApp = async (session) => { loginPanel.style.display = session ? 'none' : 'block'; app.style.display = session ? 'block' : 'none'; if (session) { try { await loadCategories(); await loadProducts(); } catch (error) { setStatus('#product-status', error.message); } } };
@@ -113,6 +120,8 @@
         document.querySelector('#category-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#category-status', 'Saving category...'); const { error } = await supabase.from('categories').insert({ name: document.querySelector('#category-name').value.trim(), slug: document.querySelector('#category-slug').value.trim() }); if (error) return setStatus('#category-status', error.message); event.target.reset(); document.querySelector('#category-slug').dataset.edited = ''; setStatus('#category-status', 'Category created.'); await loadCategories(); });
         document.querySelector('#product-form').addEventListener('submit', async (event) => { event.preventDefault(); setStatus('#product-status', 'Uploading image and saving product...'); const file = document.querySelector('#product-image').files[0]; const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, '-'); const path = `${crypto.randomUUID()}-${safeName}`; const upload = await supabase.storage.from('products').upload(path, file, { contentType: file.type, upsert: false }); if (upload.error) return setStatus('#product-status', upload.error.message); const imageUrl = supabase.storage.from('products').getPublicUrl(path).data.publicUrl; const { error } = await supabase.from('products').insert({ category_id: Number(document.querySelector('#product-category').value), name: document.querySelector('#product-name').value.trim(), sku: document.querySelector('#product-sku').value.trim(), price: Number(document.querySelector('#product-price').value), unit: document.querySelector('#product-unit').value.trim(), stock: Number(document.querySelector('#product-stock').value), image_url: imageUrl, image_path: path, is_active: true }); if (error) return setStatus('#product-status', error.message); event.target.reset(); setStatus('#product-status', 'Product saved successfully.'); await loadCategories(); await loadProducts(); });
         document.querySelector('#product-search').addEventListener('input', renderProducts);
+        document.querySelector('#product-category-filter').addEventListener('change', renderProducts);
+        document.querySelector('#product-sort').addEventListener('change', renderProducts);
         const editModal = document.querySelector('#edit-modal');
         const closeEdit = () => { editModal.hidden = true; document.querySelector('#edit-product-form').reset(); setStatus('#edit-status', ''); };
         document.querySelector('#close-edit').addEventListener('click', closeEdit);
